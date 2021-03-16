@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Logging;
 using ProgressRail.Models.Context;
 using ProgressRail.Models.Entity;
 using System;
@@ -12,12 +13,15 @@ namespace ProgressRail.Controllers
     public class ToDoController : Controller
     {
         private readonly Context _context;
-        public ToDoController(Context context)
+        private readonly ILogger<ToDoController> _logger;
+        public ToDoController(Context context, ILogger<ToDoController> logger)
         {
             _context = context;
+            _logger = logger;
         }
         public IActionResult Index()
         {
+            _logger.LogInformation("Index page says hello");
             var lista = _context.ToDo.ToList();
             return View(lista);
         }
@@ -32,15 +36,21 @@ namespace ProgressRail.Controllers
         [HttpPost]
         public IActionResult Create(ToDo todo)
         {
-            if (ModelState.IsValid)
-            {
-                _context.ToDo.Add(todo);
-                _context.SaveChanges();
+            try {
+                if (ModelState.IsValid)
+                {
+                    _context.ToDo.Add(todo);
+                    _context.SaveChanges();
 
-                return RedirectToAction("Index");
+                    return RedirectToAction("Index");
+                }
+
+                return View(todo);
             }
-
-            return View(todo);
+            catch (Exception e) {
+                _logger.LogError("Um erro ocorreu ao tentar criar uma atividade", e);
+                return StatusCode(500);
+            } 
         }
 
         [HttpGet]
@@ -54,16 +64,24 @@ namespace ProgressRail.Controllers
         [HttpPost]
         public IActionResult Edit(ToDo todo)
         {
-            if (ModelState.IsValid)
+            try
             {
-                _context.ToDo.Update(todo);
-                _context.SaveChanges();
+                if (ModelState.IsValid)
+                {
+                    _context.ToDo.Update(todo);
+                    _context.SaveChanges();
 
-                return RedirectToAction("Index");
+                    return RedirectToAction("Index");
+                }
+                else
+                {
+                    return View(todo);
+                }
             }
-            else
+            catch (Exception e)
             {
-                return View(todo);
+                _logger.LogError("Um erro ocorreu ao tentar editar uma atividade", e);
+                return StatusCode(500);
             }
         }
 
@@ -77,15 +95,23 @@ namespace ProgressRail.Controllers
         [HttpPost]
         public IActionResult Delete(ToDo _todo)
         {
-            var todo = _context.ToDo.Find(_todo.Id);
-            if (todo != null)
+            try
             {
-                _context.ToDo.Remove(todo);
-                _context.SaveChanges();
+                var todo = _context.ToDo.Find(_todo.Id);
+                if (todo != null)
+                {
+                    _context.ToDo.Remove(todo);
+                    _context.SaveChanges();
 
-                return RedirectToAction("Index");
+                    return RedirectToAction("Index");
+                }
+                return View(todo);
             }
-            return View(todo);
+            catch (Exception e)
+            {
+                _logger.LogError("Um erro ocorreu ao tentar deletar uma atividade", e);
+                return StatusCode(500);
+            }
         }
 
         [HttpGet]
